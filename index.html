@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Przerwy</title>
-<link rel="shortcut icon" href="https://sewbej.github.io/przerwy/pause.png">
+    <link rel="shortcut icon" href="https://sewbej.github.io/przerwy/pause.png">
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="xlsx.full.min.js"></script>
     <style>
@@ -21,23 +21,23 @@
         
         button { width: 100%; padding: 16px; margin-top: 12px; font-size: 22px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; }
         #saveBtn { background-color: #1a73e8; color: white; box-shadow: 0 2px 6px rgba(26,115,232,0.4); }
-        #reportBtn { background-color: #34a853; color: white; margin-top: 30px; }
-        #previewBtn { background-color: #fbbc04; color: #202124; margin-top: 12px; }
         
-        /* Styl licznika */
-        #counter-display { margin-top: 0px; font-size: 1.2em; color: #5f6368; font-weight: 500; }
-        .has-data { color: #1a73e8 !important; font-weight: bold; }
-
-        #clearBtn { background-color: #ea4335; color: white; margin-top: 180px; opacity: 0.8; }
+        #clearBtn { background-color: #ea4335; color: white; margin-top: 30px; opacity: 0.8; }
         button:active { transform: scale(0.9); }
 
-        /* Styl głównej tabeli podglądu */
-        #preview-section { text-align: left; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 1.1em; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background-color: #f2f2f2; color: #333; }
+        /* Styl stałej tabeli podglądu na żywo */
+        #live-preview-table-container { 
+            width: 100%; 
+            margin-top: 2px; 
+            max-height: 800px; 
+            overflow-y: auto; 
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 1.0em; text-align: left; }
+        th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+        th { background-color: #f2f2f2; color: #333; position: sticky; top: 0; }
         .status-in-progress { color: #ea4335; font-weight: bold; font-size: 0.9em; }
-        #closePreviewBtn { background-color: #5f6368; color: white; margin-top: 20px; }
 
         /* Styl mini-tabeli indywidualnej */
         #personal-preview-container { margin: 20px 0; max-height: 560px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 15px; }
@@ -53,31 +53,22 @@
 
     <div id="reader"></div>
 
-    <!-- Panel po zeskanowaniu -->
     <div id="action-section" class="section hidden">
         <div class="data-row"><span id="result-display" class="highlight"></span></div>
         <div class="data-row">Godzina: <span id="time-display" class="highlight"></span></div>
         <div id="detected-action" class="status-badge"></div>
         
-        <!-- Nowa sekcja: Indywidualny podgląd -->
         <div id="personal-preview-container"></div>
         
         <button id="saveBtn">ZATWIERDŹ</button>
     </div>
 
-    <!-- Panel dolny z raportem, podglądem i licznikiem -->
     <div class="section" id="bottom-controls">
-        <div id="counter-display">ilość wpisów: <span id="row-count">0</span></div>
-        <button id="previewBtn">PODLGLĄD DANYCH</button>
-        <button id="reportBtn">ZAPISZ REJESTR</button>
+        <h5 style="padding: 0; text-align: center; margin-top: 0; margin-bottom: 0px; color: #111111;"> </h5>
+        
+        <div id="live-preview-table-container"></div>
+    
         <button id="clearBtn">WYCZYŚĆ REJESTR</button>
-    </div>
-
-    <!-- Panel podglądu danych (domyślnie ukryty) -->
-    <div id="preview-section" class="section hidden">
-        <h3 style="text-align: center; margin-top: 0;">aktualne wpisy</h3>
-        <div id="preview-table-container"></div>
-        <button id="closePreviewBtn">ZAMKNIJ PODGLĄD</button>
     </div>
 
     <script>
@@ -86,24 +77,51 @@
         let currentFullDate = null;
         let isReturnAction = false;
 
-        // Funkcja aktualizująca licznik wierszy
+        // Przebudowana funkcja: generuje zsumowaną tabelę podglądu na żywo
         function updateRowCounter() {
             const logs = JSON.parse(localStorage.getItem('rejestratorPrzerw')) || [];
-            const countElement = document.getElementById('row-count');
-            const displayElement = document.getElementById('counter-display');
+            const container = document.getElementById('live-preview-table-container');
             
-            countElement.innerText = logs.length;
-            
-            if (logs.length > 0) {
-                displayElement.classList.add('has-data');
+            let html = '<table><tr><th>Imię i Nazwisko</th><th>Łączny czas przerw</th></tr>';
+
+            if (logs.length === 0) {
+                html += '<tr><td colspan="2" style="text-align:center; color: #888; font-style: italic;">Brak wpisów</td></tr>';
             } else {
-                displayElement.classList.remove('has-data');
+                let summary = {};
+
+                logs.forEach(log => {
+                    if (!summary[log.kod]) {
+                        summary[log.kod] = { seconds: 0, inProgress: false };
+                    }
+
+                    if (log.powrotRaw) {
+                        const start = new Date(log.wyjscieRaw);
+                        const end = new Date(log.powrotRaw);
+                        summary[log.kod].seconds += Math.floor((end - start) / 1000);
+                    } else {
+                        summary[log.kod].inProgress = true;
+                    }
+                });
+
+                // Sortowanie alfabetyczne po nazwisku/kodzie
+                let sortedEmployees = Object.keys(summary).sort((a, b) => a.localeCompare(b, 'pl'));
+
+                sortedEmployees.forEach(employee => {
+                    let timeDisplay = formatTotalTime(summary[employee].seconds);
+                    
+                    if (summary[employee].inProgress) {
+                        timeDisplay += ' <span class="status-in-progress">PRZERWA</span>';
+                    }
+
+                    html += `<tr><td>${employee}</td><td><strong>${timeDisplay}</strong></td></tr>`;
+                });
             }
+            html += '</table>';
+            container.innerHTML = html;
         }
 
         function startScanner() {
             document.getElementById('action-section').classList.add('hidden');
-            document.getElementById('preview-section').classList.add('hidden');
             document.getElementById('reader').classList.remove('hidden');
             document.getElementById('bottom-controls').classList.remove('hidden');
             updateRowCounter();
@@ -139,7 +157,7 @@
                 badge.className = "status-badge status-exit";
             }
 
-// Obliczanie ŁĄCZNEGO czasu przerw dla skanowanej osoby
+            // Obliczanie ŁĄCZNEGO czasu przerw dla skanowanej osoby
             let personLogs = logs.filter(log => log.kod === currentCode);
             let personalPreviewHtml = '';
             
@@ -157,7 +175,6 @@
                     }
                 });
 
-                // Formatujemy zsumowany czas przy użyciu nowej funkcji formatTotalTime
                 let timeDisplay = formatTotalTime(totalSeconds);
                 
                 personalPreviewHtml += '<table><tr><th>Łączny czas przerw:</th></tr>';
@@ -219,99 +236,18 @@
             return [h, m, s].map(v => v < 10 ? "0" + v : v).join(":");
         }
 
-function formatTotalTime(totalSeconds) {
-    let h = Math.floor(totalSeconds / 3600);
-    let m = Math.floor((totalSeconds % 3600) / 60);
-    let s = totalSeconds % 60;
-    return [h, m, s].map(v => v < 10 ? "0" + v : v).join(":");
-}
-
-        document.getElementById('reportBtn').addEventListener('click', () => {
-            let logs = JSON.parse(localStorage.getItem('rejestratorPrzerw'));
-            if (!logs || logs.length === 0) {
-                alert("Brak danych w rejestrze.");
-                return;
-            }
-
-            const excelData = logs.map(log => ({
-                "imię i nazwisko": log.kod,
-                "wyjście": log.wyjscieFormat,
-                "powrót": log.powrotFormat,
-                "czas trwania": calculateDuration(log.wyjscieRaw, log.powrotRaw)
-            }));
-
-            const worksheet = XLSX.utils.json_to_sheet(excelData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Rejestr");
-
-            const now = new Date();
-            const fileName = `Rejestr_przerw_${now.toLocaleDateString()}_${now.toLocaleTimeString()}.xlsx`.replace(/[:]/g, '-');
-            if(confirm(`Plik zostanie zapisany w folderze "Pobrane" (Downloads).\nNazwa pliku:\n${fileName}`)) {
-
-            XLSX.writeFile(workbook, fileName);
-            }
-        });
+        function formatTotalTime(totalSeconds) {
+            let h = Math.floor(totalSeconds / 3600);
+            let m = Math.floor((totalSeconds % 3600) / 60);
+            let s = totalSeconds % 60;
+            return [h, m, s].map(v => v < 10 ? "0" + v : v).join(":");
+        }
 
         document.getElementById('clearBtn').addEventListener('click', () => {
             if (confirm("Czy na pewno wyczyścić rejestr? Wszystkie wpisy zostaną usunięte.")) {
                 localStorage.removeItem('rejestratorPrzerw');
                 updateRowCounter();
             }
-        });
-
-// --- Obsługa przycisku "Podgląd danych" (WERSJA ZSUMOWANA) ---
-document.getElementById('previewBtn').addEventListener('click', () => {
-    let logs = JSON.parse(localStorage.getItem('rejestratorPrzerw')) || [];
-    
-    document.getElementById('reader').classList.add('hidden');
-    document.getElementById('bottom-controls').classList.add('hidden');
-    document.getElementById('preview-section').classList.remove('hidden');
-
-    let html = '<table><tr><th>Imię i Nazwisko</th><th>Łączny czas przerw</th></tr>';
-
-    if (logs.length === 0) {
-        html += '<tr><td colspan="2" style="text-align:center;">Brak wpisów</td></tr>';
-    } else {
-        // Obiekt do grupowania danych: { "Jan Nowak": { seconds: 120, inProgress: false } }
-        let summary = {};
-
-        logs.forEach(log => {
-            if (!summary[log.kod]) {
-                summary[log.kod] = { seconds: 0, inProgress: false };
-            }
-
-            if (log.powrotRaw) {
-                // Obliczamy sekundy dla tego konkretnego wpisu i dodajemy do sumy
-                const start = new Date(log.wyjscieRaw);
-                const end = new Date(log.powrotRaw);
-                summary[log.kod].seconds += Math.floor((end - start) / 1000);
-            } else {
-                // Jeśli choć jedna przerwa nie jest zamknięta, flagujemy pracownika
-                summary[log.kod].inProgress = true;
-            }
-        });
-
-        // Sortowanie alfabetyczne po nazwisku (kluczu obiektu)
-        let sortedEmployees = Object.keys(summary).sort((a, b) => a.localeCompare(b, 'pl'));
-
-        sortedEmployees.forEach(employee => {
-            let timeDisplay = formatTotalTime(summary[employee].seconds);
-            
-            // Informacja, jeśli pracownik aktualnie przebywa na przerwie
-            if (summary[employee].inProgress) {
-                timeDisplay += ' <span class="status-in-progress">PRZERWA</span>';
-            }
-
-            html += `<tr><td>${employee}</td><td><strong>${timeDisplay}</strong></td></tr>`;
-        });
-    }
-    html += '</table>';
-
-    document.getElementById('preview-table-container').innerHTML = html;
-});
-
-        document.getElementById('closePreviewBtn').addEventListener('click', () => {
-            startScanner();
         });
 
         window.onload = startScanner;
