@@ -139,22 +139,38 @@
                 badge.className = "status-badge status-exit";
             }
 
-            // Generowanie indywidualnego podglądu przerw dla skanowanej osoby
+// Obliczanie ŁĄCZNEGO czasu przerw dla skanowanej osoby
             let personLogs = logs.filter(log => log.kod === currentCode);
             let personalPreviewHtml = '';
             
             if (personLogs.length > 0) {
-                personalPreviewHtml += '<table><tr><th>Historia przerw</th></tr>';
+                let totalSeconds = 0;
+                let currentlyOnBreak = false;
+
                 personLogs.forEach(log => {
-                    let duration = calculateDuration(log.wyjscieRaw, log.powrotRaw);
-                    if (!log.powrotRaw) {
-                        duration = '<span class="status-in-progress">PRZERWA</span>';
+                    if (log.powrotRaw) {
+                        const start = new Date(log.wyjscieRaw);
+                        const end = new Date(log.powrotRaw);
+                        totalSeconds += Math.floor((end - start) / 1000);
+                    } else {
+                        currentlyOnBreak = true;
                     }
-                    personalPreviewHtml += `<tr><td>${duration}</td></tr>`;
                 });
+
+                // Formatujemy zsumowany czas przy użyciu nowej funkcji formatTotalTime
+                let timeDisplay = formatTotalTime(totalSeconds);
+                
+                personalPreviewHtml += '<table><tr><th>Dotychczasowy łączny czas przerw dzisiaj</th></tr>';
+                
+                if (currentlyOnBreak) {
+                    personalPreviewHtml += `<tr><td><strong>${timeDisplay} </strong><span class="status-in-progress">+ aktualna przerwa</span></td></tr>`;
+                } else {
+                    personalPreviewHtml += `<tr><td>strong>${timeDisplay}</strong></td></tr>`;
+                }
+                
                 personalPreviewHtml += '</table>';
             } else {
-                personalPreviewHtml = '<div class="no-records">Brak wcześniejszych wpisów</div>';
+                personalPreviewHtml = '<div class="no-records">Brak wcześniejszych wpisów dzisiaj</div>';
             }
             
             document.getElementById('personal-preview-container').innerHTML = personalPreviewHtml;
