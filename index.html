@@ -245,7 +245,7 @@ function formatTotalTime(totalSeconds) {
 
 // --- Obsługa przycisku "Podgląd danych" (WERSJA ZSUMOWANA) ---
 document.getElementById('previewBtn').addEventListener('click', () => {
-    let logs = JSON.parse(localStorage.getItem('skanerInteligentny')) || [];
+    let logs = JSON.parse(localStorage.getItem('rejestratorPrzerw')) || [];
     
     document.getElementById('reader').classList.add('hidden');
     document.getElementById('bottom-controls').classList.add('hidden');
