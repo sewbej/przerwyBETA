@@ -148,7 +148,7 @@
                 personLogs.forEach(log => {
                     let duration = calculateDuration(log.wyjscieRaw, log.powrotRaw);
                     if (!log.powrotRaw) {
-                        duration = '<span class="status-in-progress">przerwa</span>';
+                        duration = '<span class="status-in-progress">PRZERWA</span>';
                     }
                     personalPreviewHtml += `<tr><td>${duration}</td></tr>`;
                 });
@@ -283,7 +283,7 @@ document.getElementById('previewBtn').addEventListener('click', () => {
             
             // Informacja, jeśli pracownik aktualnie przebywa na przerwie
             if (summary[employee].inProgress) {
-                timeDisplay += ' <span class="status-in-progress">przerwa</span>';
+                timeDisplay += ' <span class="status-in-progress">PRZERWA</span>';
             }
 
             html += `<tr><td>${employee}</td><td><strong>${timeDisplay}</strong></td></tr>`;
