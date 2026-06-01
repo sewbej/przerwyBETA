@@ -283,10 +283,10 @@ document.getElementById('previewBtn').addEventListener('click', () => {
             
             // Informacja, jeśli pracownik aktualnie przebywa na przerwie
             if (summary[employee].inProgress) {
-                timeDisplay += ' <span class="status-in-progress">(W trakcie)</span>';
+                timeDisplay += ' <span class="status-in-progress">W trakcie</span>';
             }
 
-            html += `<tr><td>${employee}</td><td>${timeDisplay}</td></tr>`;
+            html += `<tr><td>${employee}</td><td><strong>${timeDisplay}</strong></td></tr>`;
         });
     }
     html += '</table>';
