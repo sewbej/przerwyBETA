@@ -42,7 +42,7 @@
         /* Styl mini-tabeli indywidualnej */
         #personal-preview-container { margin: 20px 0; max-height: 560px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 15px; }
         #personal-preview-container table { margin-top: 5px; font-size: 1em; }
-        #personal-preview-container th, #personal-preview-container td { text-align: center; padding: 8px; }
+        #personal-preview-container th, #personal-preview-container td { text-align: center; padding: 8px; font-size: 1.3em;}
         #personal-preview-container th { font-size: 1.0em; color: #5f6368; }
         .no-records { font-size: 0.9em; color: #888; font-style: italic; margin-top: 10px; }
     </style>
@@ -160,12 +160,12 @@
                 // Formatujemy zsumowany czas przy użyciu nowej funkcji formatTotalTime
                 let timeDisplay = formatTotalTime(totalSeconds);
                 
-                personalPreviewHtml += '<table><tr><th>Dotychczasowy łączny czas przerw dzisiaj</th></tr>';
+                personalPreviewHtml += '<table><tr><th>Łączny czas przerw:</th></tr>';
                 
                 if (currentlyOnBreak) {
                     personalPreviewHtml += `<tr><td><strong>${timeDisplay} </strong><span class="status-in-progress">+ aktualna przerwa</span></td></tr>`;
                 } else {
-                    personalPreviewHtml += `<tr><td>strong>${timeDisplay}</strong></td></tr>`;
+                    personalPreviewHtml += `<tr><td><strong>${timeDisplay}</strong></td></tr>`;
                 }
                 
                 personalPreviewHtml += '</table>';
